@@ -46,7 +46,7 @@ Supported:
 Run the bootstrap script:
 
 ```bash
-    ./tools/bootstrap.sh
+./tools/bootstrap.sh
 ```
 
 This will automatically install all required dependencies for your system
@@ -59,7 +59,7 @@ and prepare the Rust toolchain.
 After that, run:
 
 ```bash
-    ./tools/qemu/run.sh
+./tools/qemu/run.sh
 ```
 
 If successful you will see:
