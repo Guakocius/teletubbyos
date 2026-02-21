@@ -1,0 +1,23 @@
+# Rust
+target/
+**/*.rlib
+**/*.rmeta
+
+# ISO build
+build/
+
+# Limine clone
+tools/limine/
+
+# OS artifacts
+*.iso
+*.img
+*.bin
+
+# editor
+*.swp
+.vscode/
+.idea/
+
+# macOS nonsense
+.DS_Store
