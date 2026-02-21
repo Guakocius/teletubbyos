@@ -52,6 +52,19 @@ Run the bootstrap script:
 This will automatically install all required dependencies for your system
 and prepare the Rust toolchain.
 
+### NixOS / Nix users
+
+If you use Nix or NixOS, do not run the bootstrap script.
+
+Instead:
+```bash
+nix develop
+./tools/qemu/run.sh
+```
+
+This provides a fully reproducible development environment without installing
+any global dependencies.
+
 ---
 
 ## Running
