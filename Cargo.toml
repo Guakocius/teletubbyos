@@ -3,6 +3,11 @@ name = "teletubby-kernel"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "teletubby-kernel"
+test = false
+bench = false
+
 [profile.dev]
 panic = "abort"
 
