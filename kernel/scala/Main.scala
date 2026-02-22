@@ -57,7 +57,7 @@ def vgaPutChar(c: Char, color: UByte): Unit =
 def vgaPrint(s: String, color: UByte): Unit =
   s.foreach(c => vgaPutChar(c, color))
 
-// COM1 serial — port I/O via C stubs (Scala Native has no inline asm)
+// COM1 serial
 val COM1: UShort = 0x3F8.toUShort
 
 @extern
@@ -85,23 +85,24 @@ def serialPrint(s: String): Unit =
     serialWriteByte(c.toByte.toUByte)
   }
 
-object Kernel:
+def kernelMain(): Unit =
+  vgaClear()
+  serialInit()
+  serialPrint("TeletubbyOS kernel: booted (Scala Native).\n")
+  serialPrint("Status: Teletubbys still contained.\n")
+  val green  = vgaColor(2.toUByte,  0.toUByte)
+  val cyan   = vgaColor(3.toUByte,  0.toUByte)
+  val yellow = vgaColor(14.toUByte, 0.toUByte)
+  vgaPrint("  TeletubbyOS\n",                         cyan)
+  vgaPrint("  ============\n",                        green)
+  vgaPrint("  Kernel booted! (Scala Native)\n",       green)
+  vgaPrint("  Status: Teletubbys still contained.\n", yellow)
+  while true do ()
+
+// Satisfies sbt's main class requirement — _start is the real entry point
+object Main:
+  // _start is exported and called directly by Limine — this main is never reached
   @exported("_start")
-  def start(): Unit =
-    vgaClear()
-    serialInit()
+  def start(): Unit = kernelMain()
 
-    serialPrint("TeletubbyOS kernel: booted (Scala Native).\n")
-    serialPrint("Status: Teletubbys still contained.\n")
-
-    val green  = vgaColor(2.toUByte,  0.toUByte)
-    val cyan   = vgaColor(3.toUByte,  0.toUByte)
-    val yellow = vgaColor(14.toUByte, 0.toUByte)
-
-    vgaPrint("  TeletubbyOS\n",                         cyan)
-    vgaPrint("  ============\n",                        green)
-    vgaPrint("\n",                                      green)
-    vgaPrint("  Kernel booted! (Scala Native)\n",       green)
-    vgaPrint("  Status: Teletubbys still contained.\n", yellow)
-
-    while true do ()
+  def main(args: Array[String]): Unit = kernelMain()

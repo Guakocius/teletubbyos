@@ -1,11 +1,9 @@
 import scala.scalanative.build.*
+import java.nio.file.Paths
 
 enablePlugins(ScalaNativePlugin)
 
 scalaVersion := "3.3.3"
-
-// Tell nativeLink specifically that there is no main class
-Compile / nativeLink / mainClass := None
 
 nativeConfig := {
   val linkerScript = (ThisBuild / baseDirectory).value / "kernel" / "linker.ld"
@@ -14,6 +12,8 @@ nativeConfig := {
     .withGC(GC.none)
     .withLTO(LTO.full)
     .withOptimize(true)
+    .withClang(Paths.get("/run/current-system/sw/bin/clang"))
+    .withClangPP(Paths.get("/run/current-system/sw/bin/clang++"))
     .withLinkingOptions(Seq(
       "-nostdlib",
       "-static",
