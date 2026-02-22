@@ -36,10 +36,12 @@ nativeConfig := {
       "-static",
       s"-Wl,-T${linkerScript.absolutePath}",
       "-Wl,--no-dynamic-linker",
-    ))
-    .withCompileOptions(Seq(
+      // Kernel compile flags passed at link stage
       "-ffreestanding",
       "-fno-stack-protector",
       "-mno-red-zone",
     ))
+    // NOTE: Do NOT put -ffreestanding here — it breaks Scala Native's own
+    // C runtime (nativelib), which needs standard libc headers.
+    .withCompileOptions(Seq.empty)
 }
