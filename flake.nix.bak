@@ -4,30 +4,32 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
+    rust-overlay.url = "github:oxalica/rust-overlay";
   };
 
-  outputs = { self, nixpkgs, flake-utils }:
+  outputs = { self, nixpkgs, flake-utils, rust-overlay }:
     flake-utils.lib.eachDefaultSystem (system:
       let
-        pkgs = import nixpkgs { inherit system; };
+        overlays = [ (import rust-overlay) ];
+        pkgs = import nixpkgs {
+          inherit system overlays;
+        };
+
+        rust = pkgs.rust-bin.selectLatestNightlyWith (toolchain: toolchain.default.override {
+          extensions = [ "rust-src" "llvm-tools-preview" ];
+        });
       in
       {
         devShells.default = pkgs.mkShell {
           packages = with pkgs; [
-            # Scala Native toolchain
-            jdk21
-            sbt
-            clang
-            llvm
-            lld
-
-            # Boot / ISO tools
+            rust
             qemu
             xorriso
             git
             gnumake
+            clang
+            lld
             pkg-config
-            gcc
           ];
 
           shellHook = ''

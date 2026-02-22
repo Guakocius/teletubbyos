@@ -10,7 +10,7 @@ var vgaCol = 0
 var vgaRow = 0
 
 def vgaColor(fg: UByte, bg: UByte): UByte =
-  (fg | (bg << 4.toUByte)).toUByte
+  (fg | (bg << 4)).toUByte
 
 def vgaEntry(c: UByte, color: UByte): UShort =
   (c.toUShort | (color.toUShort << 8)).toUShort
@@ -57,15 +57,8 @@ def vgaPutChar(c: Char, color: UByte): Unit =
 def vgaPrint(s: String, color: UByte): Unit =
   s.foreach(c => vgaPutChar(c, color))
 
-// COM1 serial
+// COM1 serial — port I/O via C stubs (Scala Native has no inline asm)
 val COM1: UShort = 0x3F8.toUShort
-
-def outb(port: UShort, value: UByte): Unit =
-  import scala.scalanative.unsafe.Tag.UByte as UByteTag
-  val p = port
-  val v = value
-  // inline asm not available in Scala Native — use C extern
-  serial_outb(port, value)
 
 @extern
 def serial_outb(port: UShort, value: UByte): Unit = extern
@@ -74,16 +67,16 @@ def serial_outb(port: UShort, value: UByte): Unit = extern
 def serial_inb(port: UShort): UByte = extern
 
 def serialInit(): Unit =
-  serial_outb((COM1 + 1).toUShort, 0x00.toUByte)
-  serial_outb((COM1 + 3).toUShort, 0x80.toUByte)
-  serial_outb((COM1 + 0).toUShort, 0x03.toUByte)
-  serial_outb((COM1 + 1).toUShort, 0x00.toUByte)
-  serial_outb((COM1 + 3).toUShort, 0x03.toUByte)
-  serial_outb((COM1 + 2).toUShort, 0xC7.toUByte)
-  serial_outb((COM1 + 4).toUShort, 0x0B.toUByte)
+  serial_outb((COM1.toInt + 1).toUShort, 0x00.toUByte)
+  serial_outb((COM1.toInt + 3).toUShort, 0x80.toUByte)
+  serial_outb((COM1.toInt + 0).toUShort, 0x03.toUByte)
+  serial_outb((COM1.toInt + 1).toUShort, 0x00.toUByte)
+  serial_outb((COM1.toInt + 3).toUShort, 0x03.toUByte)
+  serial_outb((COM1.toInt + 2).toUShort, 0xC7.toUByte)
+  serial_outb((COM1.toInt + 4).toUShort, 0x0B.toUByte)
 
 def serialWriteByte(b: UByte): Unit =
-  while (serial_inb((COM1 + 5).toUShort) & 0x20.toUByte) == 0.toUByte do ()
+  while (serial_inb((COM1.toInt + 5).toUShort) & 0x20.toUByte) == 0.toUByte do ()
   serial_outb(COM1, b)
 
 def serialPrint(s: String): Unit =
@@ -92,25 +85,23 @@ def serialPrint(s: String): Unit =
     serialWriteByte(c.toByte.toUByte)
   }
 
-@exported("_start")
-def kernelMain(): Unit =
-  vgaClear()
-  serialInit()
+object Kernel:
+  @exported("_start")
+  def start(): Unit =
+    vgaClear()
+    serialInit()
 
-  // Serial output
-  serialPrint("TeletubbyOS kernel: booted (Scala Native).\n")
-  serialPrint("Status: Teletubbys still contained.\n")
+    serialPrint("TeletubbyOS kernel: booted (Scala Native).\n")
+    serialPrint("Status: Teletubbys still contained.\n")
 
-  // VGA output
-  val green  = vgaColor(2.toUByte, 0.toUByte)  // green on black
-  val cyan   = vgaColor(3.toUByte, 0.toUByte)  // cyan on black
-  val yellow = vgaColor(14.toUByte, 0.toUByte) // yellow on black
+    val green  = vgaColor(2.toUByte,  0.toUByte)
+    val cyan   = vgaColor(3.toUByte,  0.toUByte)
+    val yellow = vgaColor(14.toUByte, 0.toUByte)
 
-  vgaPrint("  TeletubbyOS", cyan)
-  vgaPrint("\n", green)
-  vgaPrint("  ============\n", green)
-  vgaPrint("\n", green)
-  vgaPrint("  Kernel booted successfully! (Scala Native)\n", green)
-  vgaPrint("  Status: Teletubbys still contained.\n", yellow)
+    vgaPrint("  TeletubbyOS\n",                         cyan)
+    vgaPrint("  ============\n",                        green)
+    vgaPrint("\n",                                      green)
+    vgaPrint("  Kernel booted! (Scala Native)\n",       green)
+    vgaPrint("  Status: Teletubbys still contained.\n", yellow)
 
-  while true do ()
+    while true do ()

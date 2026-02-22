@@ -4,20 +4,25 @@ enablePlugins(ScalaNativePlugin)
 
 scalaVersion := "3.3.3"
 
-nativeConfig ~= { c =>
-  c.withMode(Mode.releaseFull)
-   .withGC(GC.none)           // no GC �� bare metal!
-   .withLTO(LTO.full)
-   .withOptimize(true)
-   .withLinkingOptions(Seq(
-     "-nostdlib",
-     "-static",
-     "-Wl,-T../../kernel/linker.ld",
-     "-Wl,--no-dynamic-linker",
-   ))
-   .withCompileOptions(Seq(
-     "-ffreestanding",
-     "-fno-stack-protector",
-     "-mno-red-zone",
-   ))
+// Tell nativeLink specifically that there is no main class
+Compile / nativeLink / mainClass := None
+
+nativeConfig := {
+  val linkerScript = (ThisBuild / baseDirectory).value / "kernel" / "linker.ld"
+  NativeConfig.empty
+    .withMode(Mode.releaseFull)
+    .withGC(GC.none)
+    .withLTO(LTO.full)
+    .withOptimize(true)
+    .withLinkingOptions(Seq(
+      "-nostdlib",
+      "-static",
+      s"-Wl,-T${linkerScript.absolutePath}",
+      "-Wl,--no-dynamic-linker",
+    ))
+    .withCompileOptions(Seq(
+      "-ffreestanding",
+      "-fno-stack-protector",
+      "-mno-red-zone",
+    ))
 }
