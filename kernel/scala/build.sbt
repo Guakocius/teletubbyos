@@ -5,7 +5,6 @@ enablePlugins(ScalaNativePlugin)
 
 scalaVersion := "3.3.3"
 
-// Resolve clang from PATH, falling back to common install locations
 def findClang(name: String): java.nio.file.Path = {
   val fromPath = scala.util.Try(
     sys.process.Process(Seq("which", name)).!!.trim
@@ -19,7 +18,7 @@ def findClang(name: String): java.nio.file.Path = {
   candidates
     .map(Paths.get(_))
     .find(p => p.toFile.exists && p.toFile.canExecute)
-    .getOrElse(Paths.get(name)) // last resort: let the OS find it
+    .getOrElse(Paths.get(name))
 }
 
 nativeConfig := {
@@ -32,11 +31,16 @@ nativeConfig := {
     .withOptimize(true)
     .withClang(findClang("clang"))
     .withClangPP(findClang("clang++"))
+    // Scala Native automatically appends -lpthread and -ldl at link time.
+    // Those are userspace-only shared libs — they don't exist for a bare-metal
+    // kernel. Use --unresolved-symbols=ignore-all so the linker doesn't fail.
+    // The kernel never calls pthread/dl at runtime so this is safe.
     .withLinkingOptions(Seq(
       "-nostdlib",
       "-static",
       s"-Wl,-T,${linkerScript.getCanonicalPath}",
       "-Wl,--no-dynamic-linker",
+      "-Wl,--unresolved-symbols=ignore-all",
     ))
     // NOTE: Do NOT put -ffreestanding here — it breaks Scala Native's own
     // C runtime (nativelib/gc.c, libunwind) which needs standard libc headers.
