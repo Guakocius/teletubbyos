@@ -7,7 +7,9 @@ scalaVersion := "3.3.3"
 
 // Resolve clang from PATH, falling back to common install locations
 def findClang(name: String): java.nio.file.Path = {
-  val fromPath = sys.process.Process(Seq("which", name)).lazyLines_!.headOption
+  val fromPath = scala.util.Try(
+    sys.process.Process(Seq("which", name)).!!.trim
+  ).toOption.filter(_.nonEmpty)
   val candidates = Seq(
     fromPath,
     Some(s"/usr/bin/$name"),
