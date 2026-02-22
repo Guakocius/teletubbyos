@@ -23,7 +23,8 @@ def findClang(name: String): java.nio.file.Path = {
 }
 
 nativeConfig := {
-  val linkerScript = (ThisBuild / baseDirectory).value / "kernel" / "linker.ld"
+  // build.sbt lives in kernel/scala/ — linker.ld is one level up in kernel/
+  val linkerScript = (ThisBuild / baseDirectory).value / ".." / "linker.ld"
   NativeConfig.empty
     .withMode(Mode.releaseFull)
     .withGC(GC.none)
@@ -34,14 +35,13 @@ nativeConfig := {
     .withLinkingOptions(Seq(
       "-nostdlib",
       "-static",
-      s"-Wl,-T${linkerScript.absolutePath}",
+      s"-Wl,-T,${linkerScript.getCanonicalPath}",
       "-Wl,--no-dynamic-linker",
-      // Kernel compile flags passed at link stage
-      "-ffreestanding",
+    ))
+    // NOTE: Do NOT put -ffreestanding here — it breaks Scala Native's own
+    // C runtime (nativelib/gc.c, libunwind) which needs standard libc headers.
+    .withCompileOptions(Seq(
       "-fno-stack-protector",
       "-mno-red-zone",
     ))
-    // NOTE: Do NOT put -ffreestanding here — it breaks Scala Native's own
-    // C runtime (nativelib), which needs standard libc headers.
-    .withCompileOptions(Seq.empty)
 }
