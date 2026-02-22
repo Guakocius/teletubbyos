@@ -11,23 +11,23 @@ rm -rf "$ISO_DIR"/*
 mkdir -p "$ISO_DIR/boot"
 
 # Build kernel (freestanding: core only)
-( cd "$ROOT" && cargo build --release -p teletubby-kernel --manifest-path ./Cargo.toml )
+( cd "$ROOT" && cargo build --release -Zbuild-std=core,compiler_builtins -Zjson-target-spec )
 
-cp "$ROOT/kernel/target/x86_64-teletubbyos/release/teletubby-kernel" "$ISO_DIR/boot/kernel.elf"
+cp "$ROOT/target/x86_64-teletubbyos/release/teletubby-kernel" "$ISO_DIR/boot/kernel.elf"
 cp "$ROOT/boot/limine.cfg" "$ISO_DIR/boot/limine.cfg"
 
 # Fetch/Build limine if missing
 LIMINE_DIR="$ROOT/tools/limine"
 if [[ ! -d "$LIMINE_DIR" ]]; then
   mkdir -p "$ROOT/tools"
-  git clone --depth=1 https://github.com/limine-bootloader/limine.git "$LIMINE_DIR"
-  ( cd "$LIMINE_DIR" && make -j"$(nproc)" )
+  git clone --depth=1 --branch v4.20231024.eol-binary \
+    https://github.com/limine-bootloader/limine.git "$LIMINE_DIR"
 fi
 
 # Copy limine boot files
-cp "$LIMINE_DIR/limine-bios.sys" "$ISO_DIR/boot/"
-cp "$LIMINE_DIR/limine-bios-cd.bin" "$ISO_DIR/boot/"
-cp "$LIMINE_DIR/limine-uefi-cd.bin" "$ISO_DIR/boot/"
+cp "$LIMINE_DIR/limine.sys" "$ISO_DIR/boot/"
+cp "$LIMINE_DIR/limine-cd.bin" "$ISO_DIR/boot/"
+cp "$LIMINE_DIR/limine-cd-efi.bin" "$ISO_DIR/boot/"
 
 mkdir -p "$ISO_DIR/EFI/BOOT"
 cp "$LIMINE_DIR/BOOTX64.EFI" "$ISO_DIR/EFI/BOOT/"
@@ -35,14 +35,16 @@ cp "$LIMINE_DIR/BOOTIA32.EFI" "$ISO_DIR/EFI/BOOT/" 2>/dev/null || true
 
 # Create ISO (xorriso)
 xorriso -as mkisofs \
-  -b boot/limine-bios-cd.bin \
+  -b boot/limine-cd.bin \
   -no-emul-boot -boot-load-size 4 -boot-info-table \
-  --efi-boot boot/limine-uefi-cd.bin \
+  --efi-boot boot/limine-cd-efi.bin \
   -efi-boot-part --efi-boot-image --protective-msdos-label \
   "$ISO_DIR" -o "$ISO"
 
-# Install limine stage (BIOS)
-"$LIMINE_DIR/limine" bios-install "$ISO"
+# Install Limine BIOS stage (compile deploy tool first)
+gcc -o "$LIMINE_DIR/limine-deploy" "$LIMINE_DIR/limine-deploy.c"
+"$LIMINE_DIR/limine-deploy" "$ISO"
+
 
 # Run QEMU (serial to terminal)
 qemu-system-x86_64 \
