@@ -13,7 +13,7 @@ def findClang(name: String): java.nio.file.Path = {
     fromPath,
     Some(s"/usr/bin/$name"),
     Some(s"/usr/local/bin/$name"),
-    Some(s"/run/current-system/sw/bin/$name"), // NixOS
+    Some(s"/run/current-system/sw/bin/$name"),
   ).flatten
   candidates
     .map(Paths.get(_))
@@ -21,15 +21,12 @@ def findClang(name: String): java.nio.file.Path = {
     .getOrElse(Paths.get(name))
 }
 
-// Scala Native's nativelib unconditionally adds -lpthread and -ldl.
-// Those are userspace-only shared libraries that don't exist in a
-// bare-metal -nostdlib -static kernel build. Strip them out here.
-nativeLinkingOptions := nativeLinkingOptions.value
-  .filterNot(o => o == "-lpthread" || o == "-ldl" || o == "pthread" || o == "dl")
-
 nativeConfig := {
-  // build.sbt lives in kernel/scala/ — linker.ld is one level up in kernel/
   val linkerScript = (ThisBuild / baseDirectory).value / ".." / "linker.ld"
+  // Empty stub archives for pthread and dl — Scala Native's nativelib links
+  // them unconditionally, but they don't exist in a bare-metal -static build.
+  // The stubs satisfy the linker; the symbols are never called at runtime.
+  val stubsDir = (ThisBuild / baseDirectory).value / "stubs"
   NativeConfig.empty
     .withMode(Mode.releaseFull)
     .withGC(GC.none)
@@ -42,9 +39,9 @@ nativeConfig := {
       "-static",
       s"-Wl,-T," + linkerScript.getCanonicalPath,
       "-Wl,--no-dynamic-linker",
+      // Point linker at our empty stub archives so -lpthread and -ldl resolve
+      s"-L" + stubsDir.getCanonicalPath,
     ))
-    // NOTE: Do NOT put -ffreestanding here — it breaks Scala Native's own
-    // C runtime (nativelib/gc.c, libunwind) which needs standard libc headers.
     .withCompileOptions(Seq(
       "-fno-stack-protector",
       "-mno-red-zone",
