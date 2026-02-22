@@ -11,7 +11,8 @@ rm -rf "$ISO_DIR"/*
 mkdir -p "$ISO_DIR/boot"
 
 # Build kernel (freestanding: core only)
-( cd "$ROOT" && cargo build --release -Zbuild-std=core,compiler_builtins -Zjson-target-spec )
+( cd "$ROOT" && RUSTFLAGS="-C link-arg=-Tkernel/linker.ld" \
+    cargo build --release -Zbuild-std=core,compiler_builtins -Zjson-target-spec )
 
 cp "$ROOT/target/x86_64-teletubbyos/release/teletubby-kernel" "$ISO_DIR/boot/kernel.elf"
 cp "$ROOT/boot/limine.cfg" "$ISO_DIR/boot/limine.cfg"
